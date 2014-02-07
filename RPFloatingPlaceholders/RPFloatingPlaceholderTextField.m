@@ -93,8 +93,11 @@
 
 - (void)setFrame:(CGRect)frame
 {
-  [super setFrame:frame];
-  _originalTextFieldFrame = frame;
+  // Adjust the top margin of the text field and then cache the original
+  // view frame
+  _originalTextFieldFrame = UIEdgeInsetsInsetRect(frame, UIEdgeInsetsMake(5.f, 0.f, 2.f, 0.f));
+  
+  [super setFrame:_originalTextFieldFrame];
   [self adjustFramesForNewPlaceholder];
 }
 
@@ -146,12 +149,7 @@
     _floatingLabel.textColor = self.floatingLabelActiveTextColor;
     _floatingLabel.backgroundColor = [UIColor clearColor];
     _floatingLabel.alpha = 1.f;
-    
-    // Adjust the top margin of the text field and then cache the original
-    // view frame
-    _originalTextFieldFrame = UIEdgeInsetsInsetRect(self.frame, UIEdgeInsetsMake(5.f, 0.f, 2.f, 0.f));
-    self.frame = _originalTextFieldFrame;
-    
+  
     // Set the background to a clear color
     self.backgroundColor = [UIColor clearColor];
 }
@@ -173,7 +171,7 @@
     [super drawRect:aRect];
   
     CGRect textRect = [self textRectForBounds:aRect];
-    
+  
     // Check if we should draw the placeholder string.
     // Use RGB values found via Photoshop for placeholder color #c7c7cd.
     if (_shouldDrawPlaceholder) {
@@ -204,7 +202,8 @@
     
     // Flags the view to redraw
     [self setNeedsDisplay];
-    
+
+    _floatingLabel.frame = _originalFloatingLabelFrame;
     if (isAnimated) {
         __weak typeof(self) weakSelf = self;
         UIViewAnimationOptions options = UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionCurveEaseOut;
@@ -255,16 +254,16 @@
 
 - (void)adjustFramesForNewPlaceholder
 {
-    [_floatingLabel sizeToFit];
-    
-    CGFloat offset = _floatingLabel.font.lineHeight;
-    
-    _originalFloatingLabelFrame = CGRectMake(_originalTextFieldFrame.origin.x + 5.f, _originalTextFieldFrame.origin.y,
-                                             _originalTextFieldFrame.size.width - 10.f, _floatingLabel.frame.size.height);
-    _floatingLabel.frame = _originalFloatingLabelFrame;
-    
+    CGSize labelSize = [_floatingLabel.text sizeWithFont:_floatingLabel.font
+                                constrainedToSize:CGSizeMake(CGRectGetWidth(_originalTextFieldFrame), 9999.f)
+                                    lineBreakMode:_floatingLabel.lineBreakMode];
+    CGFloat offset = labelSize.height;
+  
+    _originalFloatingLabelFrame = CGRectMake(_originalTextFieldFrame.origin.x, _originalTextFieldFrame.origin.y,
+                                             _originalTextFieldFrame.size.width - 10.f, labelSize.height);
+  
     _offsetFloatingLabelFrame = CGRectMake(_originalFloatingLabelFrame.origin.x, _originalFloatingLabelFrame.origin.y - offset,
-                                           _originalFloatingLabelFrame.size.width, _originalFloatingLabelFrame.size.height);
+                                           labelSize.width, labelSize.height);
     
     _offsetTextFieldFrame = CGRectMake(_originalTextFieldFrame.origin.x, _originalTextFieldFrame.origin.y + offset,
                                        _originalTextFieldFrame.size.width, _originalTextFieldFrame.size.height);
